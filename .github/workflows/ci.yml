@@ -1,0 +1,47 @@
+name: CI
+
+# master 向け PR と、master / feature 系ブランチへの push で
+# 自動テスト・Lint・型チェック・ビルドを実行する。
+# 子Issue ごとの PR で品質を自動検証し、TDD 方針を支える土台。
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches:
+      - master
+      - 'feature/**'
+
+jobs:
+  # フロントエンド（React + Vite + TypeScript）の検証ジョブ。
+  # backend（C# / xUnit）は将来別ジョブとして追加する。
+  frontend:
+    name: Frontend (lint / test / build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          # package-lock.json を元に npm キャッシュを効かせる
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # lockfile 厳密インストール（CI では install ではなく ci を使う）
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # tsc 型チェック + vite 本番ビルド
+      - name: Build
+        run: npm run build
