@@ -2,7 +2,8 @@ name: CI
 
 # master 向け PR と、master / feature 系ブランチへの push で
 # 自動テスト・Lint・型チェック・ビルドを実行する。
-# 子Issue ごとの PR で品質を自動検証し、TDD 方針を支える土台。
+# feature の push 時点で落ちに気づけるよう push も対象にしつつ、
+# PR では master へマージした状態を検証する。
 on:
   pull_request:
     branches: [master]
@@ -10,6 +11,18 @@ on:
     branches:
       - master
       - 'feature/**'
+
+# 同一ブランチの重複実行を 1 本に集約する。
+# group を head_ref(=PRの元ブランチ) || ref_name(=pushのブランチ) で組むことで、
+# 「feature への push」と「その feature からの PR」が同じグループになり、
+# 二重実行・連続 push の古い run が自動キャンセルされる。
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# lint/test/build は読み取りのみで足りるため最小権限を明示する。
+permissions:
+  contents: read
 
 jobs:
   # フロントエンド（React + Vite + TypeScript）の検証ジョブ。
